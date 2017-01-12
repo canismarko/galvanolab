@@ -21,7 +21,7 @@ import math
 
 from units.predefined import define_units
 
-from . import default_units
+from . import electrochem_units
 
 define_units()
 
@@ -77,4 +77,4 @@ class CoinCellElectrode():
         active_ratio = self.laminate.active_ratio()
         active_mass = active_ratio * (self.total_mass - self.substrate_mass)
         loading = active_mass / self.area()
-        return default_units.electrode_loading(loading)
+        return electrochem_units.electrode_loading(loading)

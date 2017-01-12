@@ -29,7 +29,7 @@ import pytz
 from . import exceptions
 from .cycle import Cycle
 from .plots import new_axes
-from . import default_units
+from . import electrochem_units
 from . import biologic
 
 
@@ -49,7 +49,17 @@ class GalvanostatRun():
     """
     cycles = []
 
-    def __init__(self, filename, mass=None, *args, **kwargs):
+    def __init__(self, filename, mass=None):
+        """Parameters
+        ----------
+        filename : str
+          Filename for the .mpt file with exported data.
+        mass : optional
+          Mass of active material used. If ``None`` (default), and
+          attempt will be made to read the mass from the file. This
+          should be wrapped in a unit using the ``units`` library.
+        
+        """
         self.filename = filename
         path, ext = os.path.splitext(filename)
         file_readers = {
@@ -65,9 +75,6 @@ class GalvanostatRun():
         run = FileReader(filename)
         self._df = run.dataframe
         self.cycles = []
-        # Remove the initial resting period
-        # restingIndexes = self._df.loc[self._df['mode'] == 3].index
-        # self._df.drop(restingIndexes, inplace=True)
         # Get theoretical capacity from eclab file
         self.theoretical_capacity = self.capacity_from_file()
         # Get currents from eclab file
@@ -83,7 +90,7 @@ class GalvanostatRun():
         else:
             # Get mass from eclab file
             self.mass = run.active_mass()
-        mass_g = default_units.mass(self.mass).num
+        mass_g = electrochem_units.mass(self.mass).num
         self._df.loc[:, 'capacity'] = self._df.loc[:, '(Q-Qo)/mA.h'] / mass_g
         # Process other metadata
         self.start_time = run.metadata.get('start_time', None)
@@ -93,37 +100,6 @@ class GalvanostatRun():
         for cycle in cycles:
             new_cycle = Cycle(cycle[0], cycle[1])
             self.cycles.append(new_cycle)
-        super().__init__(*args, **kwargs)
-
-    # def load_csv(self, filename, *args, **kwargs):
-    #     """Wrapper around pandas read_csv that filters out crappy data"""
-    #     # Determine start of data
-    #     with open(filename, encoding='latin-1') as dataFile:
-    #         # The second line states how long the header is
-    #         headerLength = int(dataFile.readlines()[1][18:20]) - 1
-    #     # Skip all the initial metadata
-    #     df = pd.read_csv(filename,
-    #                      *args,
-    #                      skiprows=headerLength,
-    #                      na_values='XXX',
-    #                      sep='\t',
-    #                      **kwargs)
-    #     self._df = df
-    #     return df
-
-    # def mass_from_file(self):
-    #     """Read the mpt file and extract the sample mass"""
-    #     regexp = re.compile('^Mass of active material : ([0-9.]+) ([kmµ]?g)')
-    #     mass = None
-    #     with open(self.filename, encoding='latin-1') as f:
-    #         for line in f:
-    #             match = regexp.match(line)
-    #             if match:
-    #                 mass_num, mass_unit = match.groups()
-    #                 # We found the match, now save it
-    #                 mass = units.unit(mass_unit)(float(mass_num))
-    #                 break
-    #     return mass
 
     def capacity_from_file(self):
         """Read the mpt file and extract the theoretical capacity."""
@@ -179,7 +155,7 @@ class GalvanostatRun():
         Return the charge capacity of the given cycle (default last).
         """
         return self.cycles[cycle_idx].charge_capacity()
-
+    
     def closest_datum(self, value, label):
         """Retrieve the datapoint that is closest to the given value along the
         given label. Works best for linear columns, like time."""
@@ -188,7 +164,7 @@ class GalvanostatRun():
         idx = df.iloc[distance.argsort()].first_valid_index()
         series = df.ix[idx]
         return series
-
+    
     def plot_cycles(self, xcolumn='capacity', ycolumn='Ewe/V',
                     ax=None, *args, **kwargs):
         """
@@ -205,7 +181,7 @@ class GalvanostatRun():
             legend.append(cycle.number)
         ax.legend(legend)
         return ax
-
+    
     def plot_state_of_charge(self, framesets, ax, text="",
                              timezone='US/Central', convert_to="capacity"):
         """Plot an horizontal box with the state of charge based on the range
@@ -229,7 +205,7 @@ class GalvanostatRun():
                             zorder=1,
                             facecolor="green",
                             alpha=0.15)
-
+        
         # Add text label
         x = (capmin + capmax) / 2
         ylim = ax.get_ylim()
@@ -237,17 +213,17 @@ class GalvanostatRun():
         ax.text(x, y, text, horizontalalignment="center",
                 verticalalignment="top")
         return artist
-
+    
     def discharge_capacities(self):
         capacities = np.array([cycle.discharge_capacity()
                                for cycle in self.cycles])
         return capacities
-
+    
     def charge_capacities(self):
         capacities = np.array([cycle.charge_capacity()
                                for cycle in self.cycles])
         return capacities
-
+    
     def plot_discharge_capacity(self, *args, **kwargs):
         with warnings.catch_warnings():
             warnings.filterwarnings("once")
@@ -255,7 +231,7 @@ class GalvanostatRun():
                           DeprecationWarning)
         kwargs['direction'] = kwargs.get('direction', "discharge")
         return self.plot_capacities(*args, **kwargs)
-
+    
     def plot_capacities(self, ax=None, ax2=None,
                         direction="discharge", plot_efficiences=True):
         """Plot capacity of each cycle versus cycle number.
@@ -309,7 +285,7 @@ class GalvanostatRun():
         ax.set_ylabel('Discharge capacity $/mAhg^{-1}$')
         ax.legend(loc='lower left')
         return ax, ax2
-
+    
     def plot_differential_capacity(self, ax=None, ax2=None, cycle=None):
         if not ax:
             ax = new_axes()

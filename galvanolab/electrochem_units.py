@@ -19,15 +19,13 @@
 
 from units import unit, named_unit, named_composed_unit, scaled_unit
 
-# Prepare some units specific to electrochemistry
+# Prepare some composite units specific to electrochemistry
 hour = unit('h')
-# mAh = named_unit('mAh', ['mA', 'h'], [])
-# mAh = named_composed_unit.NamedComposedUnit('mAh', unit('mA') * hour, is_si=True)
 mAh = named_unit('mAh', ['A', 's'], [], multiplier=3.6)
 uAh = scaled_unit('µAh', 'mAh', 10**-3)
 uA = named_unit('µA', ['uA'], [])
 
-# mA = units.unit('mA')
-# a = mA(5000) * hour(2)
-# b = units.unit('A')(10)
-# print(a/b)
+## Default units defined below
+cm = unit('cm')
+electrode_loading = unit('mg') / (cm * cm)
+mass = unit('g')
