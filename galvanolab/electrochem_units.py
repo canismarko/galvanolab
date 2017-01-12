@@ -17,10 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
-import units
+from units import unit, named_unit, named_composed_unit, scaled_unit
 
 # Prepare some units specific to electrochemistry
-hour = units.unit('h')
-mAh = units.named_unit('mAh', ['mA', 'h'], [])
-uAh = units.scaled_unit('µAh', 'mAh', 10**-3)
-units.named_unit('µA', ['uA'], [])
+hour = unit('h')
+# mAh = named_unit('mAh', ['mA', 'h'], [])
+# mAh = named_composed_unit.NamedComposedUnit('mAh', unit('mA') * hour, is_si=True)
+mAh = named_unit('mAh', ['A', 's'], [], multiplier=3.6)
+uAh = scaled_unit('µAh', 'mAh', 10**-3)
+uA = named_unit('µA', ['uA'], [])
+
+# mA = units.unit('mA')
+# a = mA(5000) * hour(2)
+# b = units.unit('A')(10)
+# print(a/b)

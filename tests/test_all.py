@@ -21,12 +21,12 @@
 
 import math
 import datetime as dt
-from unittest import TestCase, expectedFailure
+from unittest import TestCase, expectedFailure, main
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 
-from units import unit, predefined
+from units import unit, predefined, named_unit, named_composed_unit
 predefined.define_units()
 
 from galvanolab.electrode import CathodeLaminate, CoinCellElectrode
@@ -36,7 +36,6 @@ from galvanolab import biologic
 
 
 testdir = os.path.join(os.path.dirname(__file__))
-print(testdir)
 mptfile = os.path.join(testdir, 'eclab-test-data.mpt')
 mprfile = os.path.join(testdir, 'NEI-C10_4cycles_C14.mpr')
 
@@ -47,12 +46,17 @@ class ElectrochemUnitsTest(TestCase):
         self.mAh = electrochem_units.mAh
         self.hour = electrochem_units.hour
         self.mA = unit('mA')
-        self.uA = unit('µA')
+        self.uA = unit('uA')
 
     def test_milli_micro_amps(self):
-        time = self.mAh(10) / self.uA(1000)
-        self.assertApproximatelyEqual(self.hour(time), self.hour(10),
-                                      tolerance=10**-10)
+        # Check that a mAh is really a scaled amp-second
+        mAh = self.mAh(1)
+        As = unit('A') * unit('s')
+        self.assertEqual(mAh, unit('A')(3.6) * unit('s')(1))
+        # Check that mAh division works
+        hours = self.mAh(10) / unit('uA')(1000)
+        hours = self.hour(hours)
+        self.assertAlmostEqual(hours.num, 10, msg=hours)
 
 
 class ElectrodeTest(TestCase):
@@ -85,7 +89,6 @@ class CycleTest(TestCase):
         self.run = GalvanostatRun(mptfile, mass=0.022563)
         self.cycle = self.run.cycles[0]
 
-    @expectedFailure
     def test_discharge_capacity(self):
         self.assertEqual(
             round(self.cycle.discharge_capacity(), 3),
@@ -100,38 +103,41 @@ class GalvanostatRunTest(TestCase):
 
     def test_read_mass(self):
         run = GalvanostatRun(mptfile)
-        self.assertEqual(run.mass, unit('g')(0.02265))
+        self.assertEqual(run.mass, unit('g')(0.02253))
 
     def test_read_capacity(self):
         run = GalvanostatRun(mptfile)
-        self.assertEqual(run.theoretical_capacity, unit('mAh')(3.357))
+        self.assertEqual(run.theoretical_capacity, unit('mAh')(3.340))
 
     def test_read_date(self):
         run = GalvanostatRun(mptfile)
         self.assertEqual(
             run.start_time,
-            dt.datetime(2015, 7, 5, 15, 1, 23)
+            dt.datetime(2015, 2, 9, 16, 20, 24)
         )
 
     def test_read_current(self):
         run = GalvanostatRun(mptfile)
         # These are practically equal but assertEqual fails due to rounding in units package
-        self.assertApproximatelyEqual(
-            run.charge_current,
-            unit('mA')(0.33570),
-            tolerance=10**-15
+        mA = unit('mA')
+        self.assertAlmostEqual(
+            mA(run.charge_current).num,
+            mA(0.334).num,
+            places=7,
         )
-        self.assertApproximatelyEqual(
-            run.discharge_current,
-            unit('mA')(-335.70),
-            tolerance=10**-15
+        self.assertAlmostEqual(
+            mA(run.discharge_current).num,
+            mA(-0.334).num,
+            places=7,
         )
 
     def test_capacity_from_time(self):
         run = GalvanostatRun(mptfile)
-        series = run.closest_datum(value=77090, label="time/s")
-        self.assertApproximatelyEqual(series.capacity, 196.964615)
+        datum = run.closest_datum(value=77067, label="time/s")
+        dQ = 1.97891703009079  # Read from file
+        expected = dQ / 0.02253
+        self.assertAlmostEqual(datum.capacity, expected)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()

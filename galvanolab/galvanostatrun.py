@@ -127,7 +127,7 @@ class GalvanostatRun():
 
     def capacity_from_file(self):
         """Read the mpt file and extract the theoretical capacity."""
-        regexp = re.compile('^for DX = [0-9], DQ = ([0-9.]+) ([kmµ]?A.h)')
+        regexp = re.compile('^for DX = [0-9]+, DQ = ([0-9.]+) ([kmµ]?A.h)')
         capacity = None
         with open(self.filename, encoding='latin-1') as f:
             for line in f:
