@@ -17,15 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
-from units import unit, named_unit, named_composed_unit, scaled_unit
+# from units import unit, named_unit, named_composed_unit, scaled_unit
+from sympy.physics import units
 
 # Prepare some composite units specific to electrochemistry
-hour = unit('h')
-mAh = named_unit('mAh', ['A', 's'], [], multiplier=3.6)
-uAh = scaled_unit('µAh', 'mAh', 10**-3)
-uA = named_unit('µA', ['uA'], [])
+# mAh = named_unit('mAh', ['A', 's'], [], multiplier=3.6)
+mAh = units.milli * units.ampere * units.hour
+uAh = units.micro * units.ampere * units.hour
+# uAh = scaled_unit('µAh', 'mAh', 10**-3)
+# uA = named_unit('µA', ['uA'], [])
+uA = units.micro * units.ampere
 
 ## Default units defined below
-cm = unit('cm')
-electrode_loading = unit('mg') / (cm * cm)
-mass = unit('g')
+electrode_loading = units.mg * units.cm**-2
+mass = units.g
+
+units

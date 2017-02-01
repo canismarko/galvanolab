@@ -24,13 +24,18 @@ import time
 from datetime import date, datetime
 from collections import OrderedDict
 
-import units
+from sympy.physics import units
+# from units import predefined, unit
 import pandas as pd
 import numpy as np
 
 """Code to read in data files from Bio-Logic instruments. Class for
 reading MPR files taken from
 https://github.com/chatcannon/galvani/blob/master/galvani/BioLogic.py"""
+
+
+# predefined.define_units()
+
 
 if sys.version_info.major <= 2:
     str3 = str
@@ -90,12 +95,16 @@ def process_mpt_headers(headers):
         if match:
             mass_num, mass_unit = match.groups()
             # We found the match, now save it
-            metadata['mass'] = units.unit(mass_unit)(float(mass_num))
+            unit = getattr(units, mass_unit)
+            metadata['mass'] = float(mass_num) * unit
         # Check for starttime
         if line[0:25] == "Acquisition started on : ":
             date_string = line[25:].strip()
             start = datetime.strptime(date_string, "%m/%d/%Y %H:%M:%S")
             metadata['start_time'] = start
+        elif line[0:4] == "mode":
+            # Start of tab-separated data, so don't read the whole file
+            break
     return metadata
 
 
@@ -144,7 +153,6 @@ class MPTFile():
             header_match = re.match("Nb header lines : (\d+)",
                                     dataFile.readlines()[1])
             headerLength = int(header_match.groups()[0]) - 1
-            # headerLength = int(dataFile.readlines()[1][18:20]) - 1
         # Skip all the initial metadata
         df = pd.read_csv(filename,
                          *args,

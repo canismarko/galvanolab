@@ -3,4 +3,5 @@ pandas
 python-dateutil
 pytz
 scipy
-units
+sympy
+# units

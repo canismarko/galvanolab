@@ -20,10 +20,10 @@
 import re
 import os
 import warnings
+import logging
 
 import numpy as np
-import units
-import units.predefined
+from sympy.physics import units
 import pytz
 
 from . import exceptions
@@ -90,8 +90,9 @@ class GalvanostatRun():
         else:
             # Get mass from eclab file
             self.mass = run.active_mass()
-        mass_g = electrochem_units.mass(self.mass).num
-        self._df.loc[:, 'capacity'] = self._df.loc[:, '(Q-Qo)/mA.h'] / mass_g
+        # mass_g = electrochem_units.mass(self.mass).num
+        delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
+        self._df.loc[:, 'capacity'] =  delta_Q / self.mass
         # Process other metadata
         self.start_time = run.metadata.get('start_time', None)
         # Split the data into cycles, except the initial resting phase
@@ -111,8 +112,10 @@ class GalvanostatRun():
                 if match:
                     cap_num, cap_unit = match.groups()
                     cap_unit = cap_unit.replace('.', '')
+                    cap_unit = getattr(electrochem_units, cap_unit)
                     # We found the match now save it
-                    capacity = units.unit(cap_unit)(float(cap_num))
+                    capacity = cap_unit * float(cap_num)
+                    break
         return capacity
 
     def currents_from_file(self):
@@ -134,9 +137,13 @@ class GalvanostatRun():
                 if unit_match:
                     charge_unit, discharge_unit = unit_match.groups()
                     data_found = True
+                    break
         if data_found:
-            charge_current = units.unit(charge_unit)(charge_num)
-            discharge_current = units.unit(discharge_unit)(discharge_num)
+            # Get the sympy units objects
+            charge_unit = getattr(electrochem_units, charge_unit.replace("µ", 'u'))
+            discharge_unit = getattr(electrochem_units, discharge_unit.replace("µ", 'u'))
+            charge_current = charge_unit * charge_num
+            discharge_current = discharge_unit * discharge_num
             return charge_current, discharge_current
         else:
             # Current data could not be extracted from file
