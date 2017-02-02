@@ -61,9 +61,16 @@ class Cycle():
         # Plot remaining values
         units_ = {
             'capacity': electrochem_units.mAh / units.g,
-            'Ewe/V': 1,
+            # 'Ewe/V': units.volt,
+            # 'time/s': units.second,
         }
-        xdata = df[xcolumn] / units_[xcolumn]
-        ydata = df[ycolumn] / units_[ycolumn]
+        # if xcolumn not in units_.keys():
+        #     raise RuntimeError("Units for {} not defined".format(xcolumn))
+        # if ycolumn not in units_.keys():
+        #     raise RuntimeError("Units for {} not defined".format(ycolumn))
+        xdata = df[xcolumn] / units_.get(xcolumn, 1)
+        # xdata = df[xcolumn] / units_[xcolumn]
+        ydata = df[ycolumn] / units_.get(ycolumn, 1)
+        # ydata = df[ycolumn] / units_[ycolumn]
         ax.plot(xdata, ydata, label=label, *args, **kwargs)
         return ax

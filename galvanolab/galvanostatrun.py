@@ -21,6 +21,7 @@ import re
 import os
 import warnings
 import logging
+from time import time
 
 import numpy as np
 from sympy.physics import units
@@ -31,6 +32,9 @@ from .cycle import Cycle
 from .plots import new_axes
 from . import electrochem_units
 from . import biologic
+
+
+log = logging.getLogger(__name__)
 
 
 def axis_label(key):
@@ -68,21 +72,26 @@ class GalvanostatRun():
         }
         if ext in file_readers.keys():
             FileReader = file_readers[ext]
+            log.debug('Using file reader "%s"', FileReader)
         else:
             msg = "Unrecognized format {}".format(ext)
             raise exceptions.FileFormatError(msg)
-        # self.load_csv(filename)
         run = FileReader(filename)
         self._df = run.dataframe
+        logstart = time()
+        log.debug(time() - logstart)
         self.cycles = []
         # Get theoretical capacity from eclab file
         self.theoretical_capacity = self.capacity_from_file()
+        log.debug(time() - logstart)
+        log.debug("Found theoretical capacity {}".format(self.theoretical_capacity))
         # Get currents from eclab file
         try:
             currents = self.currents_from_file()
             self.charge_current, self.discharge_current = currents
         except exceptions.ReadCurrentError:
             pass
+        log.debug(time() - logstart)
         # Calculate capacity from charge and mass
         if mass:
             # User provided the mass
@@ -90,8 +99,10 @@ class GalvanostatRun():
         else:
             # Get mass from eclab file
             self.mass = run.active_mass()
+        log.debug("First one {}".format(time() - logstart))
         # mass_g = electrochem_units.mass(self.mass).num
         delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
+        log.debug("Next one: {}".format(time() - logstart))
         self._df.loc[:, 'capacity'] =  delta_Q / self.mass
         # Process other metadata
         self.start_time = run.metadata.get('start_time', None)
@@ -101,6 +112,7 @@ class GalvanostatRun():
         for cycle in cycles:
             new_cycle = Cycle(cycle[0], cycle[1])
             self.cycles.append(new_cycle)
+        log.debug(time() - logstart)
 
     def capacity_from_file(self):
         """Read the mpt file and extract the theoretical capacity."""

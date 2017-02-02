@@ -110,15 +110,15 @@ def process_mpt_headers(headers):
 
 class MPTFile():
     """Simple function to open MPT files as csv.DictReader objects
-
+    
     Checks for the correct headings, skips any comments and returns a
     csv.DictReader object and a list of comments
     """
     encoding = "latin-1"
-
+    
     def __init__(self, filename):
         self.filename = filename
-
+    
         with open(self.filename, encoding=self.encoding) as mpt_file:
             magic = next(mpt_file)
             valid_magics = [
@@ -128,7 +128,7 @@ class MPTFile():
             if magic.rstrip() not in valid_magics:
                 msg = "Bad first line for EC-Lab file: '{}'"
                 raise ValueError(msg.format(magic))
-
+    
             nb_headers_match = re.match('Nb header lines : (\d+)\s*$',
                                         next(mpt_file))
             nb_headers = int(nb_headers_match.group(1))
@@ -139,9 +139,9 @@ class MPTFile():
             # column headers make three lines. Every additional line
             # is a comment line.
             header = [next(mpt_file) for i in range(nb_headers - 3)]
-
+    
         self.metadata = process_mpt_headers(header)
-
+    
         self.load_csv(self.filename)
         # self.data = csv.DictReader(self.mpt_file, dialect='excel-tab')
 
