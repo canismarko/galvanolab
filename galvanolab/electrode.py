@@ -33,8 +33,7 @@ class CathodeLaminate():
 
     """
 
-    def __init__(self, *, mass_active_material, mass_carbon,
-                 mass_binder, name):
+    def __init__(self, mass_active_material, mass_carbon, mass_binder, name):
         self.mass_active_material = mass_active_material
         self.mass_carbon = mass_carbon
         self.mass_binder = mass_binder
@@ -62,8 +61,7 @@ class CoinCellElectrode():
     - diameter: Diameter of the punch electrode
 
     """
-    def __init__(self, *, total_mass, substrate_mass,
-                 laminate, name, diameter):
+    def __init__(self, total_mass, substrate_mass, laminate, name, diameter):
         self.total_mass = total_mass
         self.substrate_mass = substrate_mass
         self.laminate = laminate

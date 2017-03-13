@@ -26,8 +26,8 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 
-from units import unit, predefined, named_unit, named_composed_unit
-predefined.define_units()
+# from units import unit, predefined, named_unit, named_composed_unit
+# predefined.define_units()
 
 from galvanolab.electrode import CathodeLaminate, CoinCellElectrode
 from galvanolab.galvanostatrun import GalvanostatRun
@@ -55,8 +55,16 @@ class ElectrochemUnitsTest(TestCase):
         self.assertEqual(mAh, unit('A')(3.6) * unit('s')(1))
         # Check that mAh division works
         hours = self.mAh(10) / unit('uA')(1000)
+        print(self.mAh(10) / unit('uA')(10))
         hours = self.hour(hours)
         self.assertAlmostEqual(hours.num, 10, msg=hours)
+
+    def test_another_bug(self):
+        mAh = electrochem_units.mAh(10)
+        print(mAh)
+        A = unit('A')
+        uA = unit('uA')
+        print(A(10) / uA(10))
 
 
 class ElectrodeTest(TestCase):
@@ -118,7 +126,8 @@ class GalvanostatRunTest(TestCase):
 
     def test_read_current(self):
         run = GalvanostatRun(mptfile)
-        # These are practically equal but assertEqual fails due to rounding in units package
+        # These are practically equal but assertEqual fails due to
+        # rounding error in units package
         mA = unit('mA')
         self.assertAlmostEqual(
             mA(run.charge_current).num,

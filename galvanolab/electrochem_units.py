@@ -18,12 +18,15 @@
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
 from units import unit, named_unit, named_composed_unit, scaled_unit
+from units.predefined import define_units
+
+define_units()
 
 # Prepare some composite units specific to electrochemistry
 hour = unit('h')
 mAh = named_unit('mAh', ['A', 's'], [], multiplier=3.6)
-uAh = scaled_unit('µAh', 'mAh', 10**-3)
-uA = named_unit('µA', ['uA'], [])
+uAh = scaled_unit(u'µAh', 'mAh', 10**-3)
+uA = named_unit(u'µA', ['uA'], [])
 
 ## Default units defined below
 cm = unit('cm')

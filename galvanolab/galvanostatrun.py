@@ -19,14 +19,15 @@
 
 import re
 import os
+import io
 import warnings
 
 import numpy as np
-import units
-import units.predefined
+# import units
+# import units.predefined
 import pytz
 
-from . import exceptions
+from . import exceptions_
 from .cycle import Cycle
 from .plots import new_axes
 from . import electrochem_units
@@ -70,7 +71,7 @@ class GalvanostatRun():
             FileReader = file_readers[ext]
         else:
             msg = "Unrecognized format {}".format(ext)
-            raise exceptions.FileFormatError(msg)
+            raise exceptions_.FileFormatError(msg)
         # self.load_csv(filename)
         run = FileReader(filename)
         self._df = run.dataframe
@@ -81,7 +82,7 @@ class GalvanostatRun():
         try:
             currents = self.currents_from_file()
             self.charge_current, self.discharge_current = currents
-        except exceptions.ReadCurrentError:
+        except exceptions_.ReadCurrentError:
             pass
         # Calculate capacity from charge and mass
         if mass:
@@ -105,7 +106,7 @@ class GalvanostatRun():
         """Read the mpt file and extract the theoretical capacity."""
         regexp = re.compile('^for DX = [0-9]+, DQ = ([0-9.]+) ([kmµ]?A.h)')
         capacity = None
-        with open(self.filename, encoding='latin-1') as f:
+        with io.open(self.filename, encoding='latin-1') as f:
             for line in f:
                 match = regexp.match(line)
                 if match:
@@ -122,7 +123,7 @@ class GalvanostatRun():
             '^unit Is\s+[kmuµ]?A\s+([kmuµ]?A)\s+([kmuµ]?A)'
         )
         data_found = False
-        with open(self.filename, encoding='latin-1') as f:
+        with io.open(self.filename, encoding='latin-1') as f:
             for line in f:
                 # Check if this line has either the currents or the units
                 current_match = current_regexp.match(line)
@@ -142,7 +143,7 @@ class GalvanostatRun():
             # Current data could not be extracted from file
             msg = "Could not read currents from file {filename}."
             msg = msg.format(filename=self.filename)
-            raise exceptions.ReadCurrentError(msg)
+            raise exceptions_.ReadCurrentError(msg)
 
     def discharge_capacity(self, cycle_idx=-1):
         """

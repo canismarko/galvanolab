@@ -19,6 +19,7 @@
 
 import sys
 import re
+import io
 from os import SEEK_SET
 import time
 from datetime import date, datetime
@@ -110,7 +111,7 @@ class MPTFile():
     def __init__(self, filename):
         self.filename = filename
 
-        with open(self.filename, encoding=self.encoding) as mpt_file:
+        with io.open(self.filename, encoding=self.encoding) as mpt_file:
             magic = next(mpt_file)
             valid_magics = [
                 'EC-Lab ASCII FILE',
@@ -139,7 +140,7 @@ class MPTFile():
     def load_csv(self, filename, *args, **kwargs):
         """Wrapper around pandas read_csv that filters out crappy data"""
         # Determine start of data
-        with open(filename, encoding=self.encoding) as dataFile:
+        with io.open(filename, encoding=self.encoding) as dataFile:
             # The second line states how long the header is
             header_match = re.match("Nb header lines : (\d+)",
                                     dataFile.readlines()[1])
@@ -299,7 +300,7 @@ class MPRFile():
 
     def __init__(self, file_or_path):
         if isinstance(file_or_path, str):
-            mpr_file = open(file_or_path, 'rb')
+            mpr_file = io.open(file_or_path, 'rb')
         else:
             mpr_file = file_or_path
 
@@ -311,7 +312,6 @@ class MPRFile():
         mpr_file.close()
 
     def read_modules(self, mpr_file):
-
         modules = list(read_VMP_modules(mpr_file))
         self.modules = modules
         settings_mod, = (m for m in modules if m['shortname'] == b'VMP Set   ')
@@ -319,7 +319,7 @@ class MPRFile():
         maybe_log_module = [m for m in modules
                             if m['shortname'] == b'VMP LOG   ']
 
-        with open('setting_data', 'wb') as f:
+        with io.open('setting_data', 'wb') as f:
             f.write(maybe_log_module[0]['data'])
 
         n_data_points = np.fromstring(data_module['data'][:4], dtype='<u4')
