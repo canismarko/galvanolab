@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
+import matplotlib.pyplot as plt
+
 from . import electrochem_units
 
 def remove_extra_spines(ax):
@@ -33,11 +35,11 @@ def new_axes(height=5, width=None):
     # Adjust width to accomodate colorbar
     if width is None:
         width = height / 0.8
-    fig = pyplot.figure(figsize=(width, height))
+    fig = plt.figure(figsize=(width, height))
     # Set background to be transparent
     fig.patch.set_alpha(0)
     # Create axes
-    ax = pyplot.gca()
+    ax = plt.gca()
     # Remove borders
     remove_extra_spines(ax)
     return ax

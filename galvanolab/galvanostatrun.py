@@ -21,10 +21,11 @@ import re
 import os
 import io
 import warnings
+import logging
+from time import time
 
 import numpy as np
-# import units
-# import units.predefined
+from sympy.physics import units
 import pytz
 
 from . import exceptions_
@@ -32,6 +33,9 @@ from .cycle import Cycle
 from .plots import new_axes
 from . import electrochem_units
 from . import biologic
+
+
+log = logging.getLogger(__name__)
 
 
 def axis_label(key):
@@ -69,21 +73,27 @@ class GalvanostatRun():
         }
         if ext in file_readers.keys():
             FileReader = file_readers[ext]
+            log.debug('Using file reader "%s"', FileReader)
         else:
             msg = "Unrecognized format {}".format(ext)
             raise exceptions_.FileFormatError(msg)
         # self.load_csv(filename)
         run = FileReader(filename)
         self._df = run.dataframe
+        logstart = time()
+        log.debug(time() - logstart)
         self.cycles = []
         # Get theoretical capacity from eclab file
         self.theoretical_capacity = self.capacity_from_file()
+        log.debug(time() - logstart)
+        log.debug("Found theoretical capacity {}".format(self.theoretical_capacity))
         # Get currents from eclab file
         try:
             currents = self.currents_from_file()
             self.charge_current, self.discharge_current = currents
         except exceptions_.ReadCurrentError:
             pass
+        log.debug(time() - logstart)
         # Calculate capacity from charge and mass
         if mass:
             # User provided the mass
@@ -91,8 +101,11 @@ class GalvanostatRun():
         else:
             # Get mass from eclab file
             self.mass = run.active_mass()
-        mass_g = electrochem_units.mass(self.mass).num
-        self._df.loc[:, 'capacity'] = self._df.loc[:, '(Q-Qo)/mA.h'] / mass_g
+        log.debug("First one {}".format(time() - logstart))
+        # mass_g = electrochem_units.mass(self.mass).num
+        delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
+        log.debug("Next one: {}".format(time() - logstart))
+        self._df.loc[:, 'capacity'] =  delta_Q / self.mass
         # Process other metadata
         self.start_time = run.metadata.get('start_time', None)
         # Split the data into cycles, except the initial resting phase
@@ -101,6 +114,7 @@ class GalvanostatRun():
         for cycle in cycles:
             new_cycle = Cycle(cycle[0], cycle[1])
             self.cycles.append(new_cycle)
+        log.debug(time() - logstart)
 
     def capacity_from_file(self):
         """Read the mpt file and extract the theoretical capacity."""
@@ -112,8 +126,10 @@ class GalvanostatRun():
                 if match:
                     cap_num, cap_unit = match.groups()
                     cap_unit = cap_unit.replace('.', '')
+                    cap_unit = getattr(electrochem_units, cap_unit)
                     # We found the match now save it
-                    capacity = units.unit(cap_unit)(float(cap_num))
+                    capacity = cap_unit * float(cap_num)
+                    break
         return capacity
 
     def currents_from_file(self):
@@ -135,9 +151,13 @@ class GalvanostatRun():
                 if unit_match:
                     charge_unit, discharge_unit = unit_match.groups()
                     data_found = True
+                    break
         if data_found:
-            charge_current = units.unit(charge_unit)(charge_num)
-            discharge_current = units.unit(discharge_unit)(discharge_num)
+            # Get the sympy units objects
+            charge_unit = getattr(electrochem_units, charge_unit.replace("µ", 'u'))
+            discharge_unit = getattr(electrochem_units, discharge_unit.replace("µ", 'u'))
+            charge_current = charge_unit * charge_num
+            discharge_current = discharge_unit * discharge_num
             return charge_current, discharge_current
         else:
             # Current data could not be extracted from file

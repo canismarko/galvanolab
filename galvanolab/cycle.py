@@ -18,6 +18,9 @@
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+from sympy.physics import units
+
+from . import electrochem_units
 
 
 class Cycle():
@@ -56,5 +59,18 @@ class Cycle():
         # Drop missing data
         df = self.df.dropna(subset=[xcolumn, ycolumn])
         # Plot remaining values
-        ax.plot(df[xcolumn], df[ycolumn], label=label, *args, **kwargs)
+        units_ = {
+            'capacity': electrochem_units.mAh / units.g,
+            # 'Ewe/V': units.volt,
+            # 'time/s': units.second,
+        }
+        # if xcolumn not in units_.keys():
+        #     raise RuntimeError("Units for {} not defined".format(xcolumn))
+        # if ycolumn not in units_.keys():
+        #     raise RuntimeError("Units for {} not defined".format(ycolumn))
+        xdata = df[xcolumn] / units_.get(xcolumn, 1)
+        # xdata = df[xcolumn] / units_[xcolumn]
+        ydata = df[ycolumn] / units_.get(ycolumn, 1)
+        # ydata = df[ycolumn] / units_[ycolumn]
+        ax.plot(xdata, ydata, label=label, *args, **kwargs)
         return ax
