@@ -27,6 +27,7 @@ uAh = units.micro * units.ampere * units.hour
 # uAh = scaled_unit('µAh', 'mAh', 10**-3)
 # uA = named_unit('µA', ['uA'], [])
 uA = units.micro * units.ampere
+mA = units.milli * units.ampere
 
 ## Default units defined below
 electrode_loading = units.mg * units.cm**-2

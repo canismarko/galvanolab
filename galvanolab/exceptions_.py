@@ -17,11 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with Galvanolab.  If not, see <http://www.gnu.org/licenses/>.
 
-<<<<<<< HEAD:galvanolab/exceptions_.py
-class ReadCurrentError(RuntimeError):
-    pass
 
-=======
 class ReadCurrentError(Exception):
     pass
->>>>>>> 022b09456902bc84ef67c1f3e7e1d7ae78402110:galvanolab/exceptions.py
