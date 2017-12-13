@@ -27,7 +27,7 @@ class Cycle():
     """Data from one charge-discharge cycle."""
 
     def __init__(self, number, df):
-        self.number = number
+        self.number = int(number)
         self.df = df
 
     def charge_capacity(self):
@@ -44,7 +44,7 @@ class Cycle():
         min_capacity = self.df['capacity'][min_idx]
         return max_capacity - min_capacity
 
-    def plot_cycle(self, xcolumn, ycolumn, ax, label=None, *args, **kwargs):
+    def plot_cycle(self, xcolumn, ycolumn, ax, label=None, marker='None', linestyle='-', *args, **kwargs):
         # Default label for plot
         if label is None:
             label = "Cycle {}".format(self.number)
@@ -60,17 +60,11 @@ class Cycle():
         df = self.df.dropna(subset=[xcolumn, ycolumn])
         # Plot remaining values
         units_ = {
-            'capacity': electrochem_units.mAh / units.g,
-            # 'Ewe/V': units.volt,
-            # 'time/s': units.second,
+            'capacity': units.milli * units.ampere * units.hour / units.g,
         }
-        # if xcolumn not in units_.keys():
-        #     raise RuntimeError("Units for {} not defined".format(xcolumn))
-        # if ycolumn not in units_.keys():
-        #     raise RuntimeError("Units for {} not defined".format(ycolumn))
         xdata = df[xcolumn] / units_.get(xcolumn, 1)
-        # xdata = df[xcolumn] / units_[xcolumn]
         ydata = df[ycolumn] / units_.get(ycolumn, 1)
-        # ydata = df[ycolumn] / units_[ycolumn]
-        ax.plot(xdata, ydata, label=label, *args, **kwargs)
+        xdata = xdata.astype(float)
+        ydata = ydata.astype(float)
+        ax.plot(xdata, ydata, label=label, marker=marker, linestyle=linestyle, *args, **kwargs)
         return ax

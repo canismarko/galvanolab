@@ -30,6 +30,8 @@ from sympy.physics import units
 import pandas as pd
 import numpy as np
 
+from . import electrochem_units
+
 """Code to read in data files from Bio-Logic instruments. Class for
 reading MPR files taken from
 https://github.com/chatcannon/galvani/blob/master/galvani/BioLogic.py"""
@@ -96,7 +98,7 @@ def process_mpt_headers(headers):
         if match:
             mass_num, mass_unit = match.groups()
             # We found the match, now save it
-            unit = getattr(units, mass_unit)
+            unit = getattr(electrochem_units, mass_unit)
             metadata['mass'] = float(mass_num) * unit
         # Check for starttime
         if line[0:25] == "Acquisition started on : ":

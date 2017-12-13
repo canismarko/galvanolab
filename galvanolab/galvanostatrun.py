@@ -105,7 +105,7 @@ class GalvanostatRun():
         # mass_g = electrochem_units.mass(self.mass).num
         delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
         log.debug("Next one: {}".format(time() - logstart))
-        self._df.loc[:, 'capacity'] =  delta_Q / self.mass
+        self._df.loc[:, 'capacity'] = delta_Q / self.mass
         # Process other metadata
         self.start_time = run.metadata.get('start_time', None)
         # Split the data into cycles, except the initial resting phase
@@ -279,11 +279,14 @@ class GalvanostatRun():
         # Plot cycle capacities
         if ax is None:
             ax = new_axes()
+        # Convert to standard units
+        capacities = (capacities / electrochem_units.mAh * electrochem_units.gram)
+        capacities = capacities.astype(float)
         ax.plot(cycle_numbers,
                 capacities,
                 marker='o',
                 linestyle='--',
-                label="Discharge capacity")
+                label="%s capacity" % direction)
         if plot_efficiences:
             efficiencies = discharge / charge * 100
             if ax2 is None:
@@ -296,6 +299,7 @@ class GalvanostatRun():
             ax2.set_ylim(0, 105)
             ax2.legend(loc='lower right')
             ax2.set_ylabel('Coulombic efficiency (%)')
+            ax2.spines['right'].set_visible(True)
         # Format axes
         if max(cycle_numbers) < 20:
             # Only show all of the ticks if there are less than 20
@@ -303,7 +307,7 @@ class GalvanostatRun():
         ax.set_xlim(0, 1 + max(cycle_numbers))
         ax.set_ylim(0, 1.1 * max(capacities))
         ax.set_xlabel('Cycle')
-        ax.set_ylabel('Discharge capacity $/mAhg^{-1}$')
+        ax.set_ylabel('%s capacity $/mAhg^{-1}$' % direction)
         ax.legend(loc='lower left')
         return ax, ax2
     
