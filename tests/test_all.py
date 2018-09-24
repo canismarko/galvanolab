@@ -26,43 +26,38 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
 
-from sympy.physics import units
-
 from galvanolab.electrode import CathodeLaminate, CoinCellElectrode
 from galvanolab.galvanostatrun import GalvanostatRun
-from galvanolab import electrochem_units
+from galvanolab import electrochem_units, CyclicVoltammogram
 from galvanolab import biologic
 
 
 testdir = os.path.join(os.path.dirname(__file__))
 mptfile = os.path.join(testdir, 'eclab-test-data.mpt')
 mprfile = os.path.join(testdir, 'NEI-C10_4cycles_C14.mpr')
+cv_mptfile = os.path.join(testdir, 'eclab-cv-test-data.mpt')
+
+
+ureg = electrochem_units.ureg
 
 
 class ElectrochemUnitsTest(TestCase):
     """Check that various values for current, capacity, etc are compatible."""
     def setUp(self):
         self.mAh = electrochem_units.mAh
-        self.mA = units.milli * units.A
-        self.uA = units.micro * units.A
+        self.mA = ureg.milliampere
+        self.uA = ureg.microampere
 
     def test_milli_micro_amps(self):
         # Check that a mAh is really a scaled amp-second
         mAh = 1 * electrochem_units.mAh
-        As = 3.6 * units.A * units.s
+        As = 3.6 * ureg.ampere * ureg.second
         self.assertEqual(mAh, As)
         # Check that mAh division works
         mAh = 10 * electrochem_units.mAh
         uA = 200 * self.uA
-        hours = mAh / uA / 3600 / units.s
+        hours = mAh / uA / 3600 / ureg.second
         self.assertAlmostEqual(hours, 10 / 0.2, msg=hours)
-
-    def test_another_bug(self):
-        mAh = electrochem_units.mAh(10)
-        print(mAh)
-        A = unit('A')
-        uA = unit('uA')
-        print(A(10) / uA(10))
 
 
 class ElectrodeTest(TestCase):
@@ -71,17 +66,17 @@ class ElectrodeTest(TestCase):
                                         mass_carbon=0.05,
                                         mass_binder=0.05,
                                         name="LMO-NEI")
-        self.electrode = CoinCellElectrode(total_mass=15 * units.mg,
-                                           substrate_mass=5 * units.mg,
+        self.electrode = CoinCellElectrode(total_mass=15 * ureg.mg,
+                                           substrate_mass=5 * ureg.mg,
                                            laminate=self.laminate,
                                            name="DummyElectrode",
-                                           diameter=12.7 * units.mm)
-
+                                           diameter=12.7 * ureg.mm)
+    
     def test_area(self):
-        diameter = 1.27 * units.cm
+        diameter = 1.27 * ureg.cm
         expected_area = math.pi * (diameter / 2)**2
         self.assertAlmostEqual(self.electrode.area() / expected_area, 1)
-
+    
     def test_mass_loading(self):
         """Ensure the electrode can calculate the loading in mg/cm^2."""
         loading_units = electrochem_units.electrode_loading
@@ -94,41 +89,43 @@ class CycleTest(TestCase):
     def setUp(self):
         self.run = GalvanostatRun(mptfile, mass=0.022563)
         self.cycle = self.run.cycles[0]
-
+    
     def test_discharge_capacity(self):
         self.assertAlmostEqual(
-            self.cycle.discharge_capacity() / electrochem_units.mAh,
+            self.cycle.discharge_capacity(),
             99.736007823354,
         )
+
+
+class CyclicVoltammogramTest(TestCase):
+    def test_import(TestCase):
+        CyclicVoltammogram(cv_mptfile)
 
 
 class GalvanostatRunTest(TestCase):
     # Currently just tests import statement
     def test_import(self):
         GalvanostatRun(mptfile)
-
+    
     def test_read_mass(self):
         run = GalvanostatRun(mptfile)
-        self.assertEqual(run.mass, float('22.53') * units.mg)
-
+        self.assertEqual(run.mass, 22.53 * ureg.mg)
+    
     def test_read_capacity(self):
         run = GalvanostatRun(mptfile)
         mAh = electrochem_units.mAh
         self.assertEqual(run.theoretical_capacity, 3.340 * mAh)
-        # self.assertEqual(run.theoretical_capacity, elec('mAh')(3.340))
-
+    
     def test_read_date(self):
         run = GalvanostatRun(mptfile)
         self.assertEqual(
             run.start_time,
             dt.datetime(2015, 2, 9, 16, 20, 24)
         )
-
+    
     def test_read_current(self):
         run = GalvanostatRun(mptfile)
-        # These are practically equal but assertEqual fails due to
-        # rounding in units package
-        uA = units.micro * units.ampere
+        uA = ureg.microampere
         self.assertEqual(
             run.charge_current,
             float('334.00') * uA,
@@ -137,14 +134,17 @@ class GalvanostatRunTest(TestCase):
             run.discharge_current,
             float('-334.00') * uA,
         )
-
+    
     def test_capacity_from_time(self):
         run = GalvanostatRun(mptfile)
         datum = run.closest_datum(value=77067, label="time/s")
-        dQ = 1.97891703009079 * units.milli * units.A * units.h # Read from file
-        expected = dQ / 0.02253 / units.grams
-        self.assertAlmostEqual(datum.capacity / expected, 1)
-
+        DQ = 1.9789170300907912 * ureg.milliampere * ureg.hour # Read from file
+        mass = 0.02253 * ureg.gram
+        expected = DQ / mass
+        # Check the loaded values
+        self.assertEqual(datum['(Q-Qo)/mA.h'], (DQ / ureg.milliampere / ureg.hour).magnitude)
+        self.assertEqual(datum.capacity * electrochem_units.capacity, expected)
+        
 
 if __name__ == '__main__':
     main()

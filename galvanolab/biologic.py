@@ -130,20 +130,20 @@ class MPTFile():
             if magic.rstrip() not in valid_magics:
                 msg = "Bad first line for EC-Lab file: '{}'"
                 raise ValueError(msg.format(magic))
-    
+            
             nb_headers_match = re.match('Nb header lines : (\d+)\s*$',
                                         next(mpt_file))
             nb_headers = int(nb_headers_match.group(1))
             if nb_headers < 3:
                 raise ValueError("Too few header lines: %d" % nb_headers)
-
+            
             # The 'magic number' line, the 'Nb headers' line and the
             # column headers make three lines. Every additional line
             # is a comment line.
             header = [next(mpt_file) for i in range(nb_headers - 3)]
-    
+        
         self.metadata = process_mpt_headers(header)
-    
+        
         self.load_csv(self.filename)
         # self.data = csv.DictReader(self.mpt_file, dialect='excel-tab')
 
@@ -166,10 +166,10 @@ class MPTFile():
                          **kwargs)
         self.dataframe = df
         return df
-
+    
     def active_mass(self):
         """Read the mpt file and extract the sample mass"""
-        return self.metadata['mass']
+        return self.metadata.get('mass', None)
 
 
 VMPmodule_hdr = np.dtype([('shortname', 'S10'),
