@@ -28,6 +28,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardi
 
 from galvanolab.electrode import CathodeLaminate, CoinCellElectrode
 from galvanolab.galvanostatrun import GalvanostatRun
+from galvanolab.experiment import Experiment
 from galvanolab import electrochem_units, CyclicVoltammogram
 from galvanolab import biologic
 
@@ -102,6 +103,23 @@ class CyclicVoltammogramTest(TestCase):
         CyclicVoltammogram(cv_mptfile)
 
 
+class ExperimentTest(TestCase):
+    """Tests for experiments in general, not specific to eg. galvanostatic
+    or CV experiments.
+    
+    """
+    def test_nmax(self):
+        """Check that the user can limit the number of data points."""
+        # First test with a valid number
+        exp = Experiment(mptfile, nmax=1000)
+        df = exp.data
+        self.assertLessEqual(len(df), 1000)
+        # Now test with "None" for no limit
+        exp = Experiment(mptfile, nmax=None)
+        df = exp.data
+        self.assertEqual(len(df), 5274)
+
+
 class GalvanostatRunTest(TestCase):
     # Currently just tests import statement
     def test_import(self):
@@ -144,7 +162,15 @@ class GalvanostatRunTest(TestCase):
         # Check the loaded values
         self.assertEqual(datum['(Q-Qo)/mA.h'], (DQ / ureg.milliampere / ureg.hour).magnitude)
         self.assertEqual(datum.capacity * electrochem_units.capacity, expected)
-        
+
+
+class BiologicMptTestCase(TestCase):
+    def test_currents(self):
+        reader = biologic.MPTFile(mptfile)
+        charge_current, discharge_current = reader.currents()
+        self.assertEqual(charge_current, 0.334 * ureg.milliampere)
+        self.assertEqual(discharge_current, -0.334 * ureg.milliampere)
+
 
 if __name__ == '__main__':
     main()

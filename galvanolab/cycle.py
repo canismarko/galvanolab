@@ -18,7 +18,6 @@
 # along with Scimap.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from sympy.physics import units
 
 from . import electrochem_units
 
@@ -60,7 +59,7 @@ class Cycle():
         df = self.df.dropna(subset=[xcolumn, ycolumn])
         # Plot remaining values
         units_ = {
-            'capacity': units.milli * units.ampere * units.hour / units.g,
+            'capacity': electrochem_units.capacity,
         }
         xdata = df[xcolumn] / units_.get(xcolumn, 1)
         ydata = df[ycolumn] / units_.get(ycolumn, 1)

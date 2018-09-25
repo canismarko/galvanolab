@@ -25,8 +25,6 @@ import time
 from datetime import date, datetime
 from collections import OrderedDict
 
-from sympy.physics import units
-# from units import predefined, unit
 import pandas as pd
 import numpy as np
 
@@ -90,7 +88,7 @@ def comma_converter(float_string):
 def process_mpt_headers(headers):
     """Process a list of text lines containing metadata from an MPT
     file. Look for certain patterns and return them as a dictionary."""
-    mass_re = re.compile('^Mass of active material : ([0-9.]+) ([kmµ]?g)')
+    mass_re = re.compile(r'^Mass of active material : ([0-9.]+) ([kmµ]?g)')
     metadata = {}
     for line in headers:
         # Check for active mass
@@ -131,7 +129,7 @@ class MPTFile():
                 msg = "Bad first line for EC-Lab file: '{}'"
                 raise ValueError(msg.format(magic))
             
-            nb_headers_match = re.match('Nb header lines : (\d+)\s*$',
+            nb_headers_match = re.match(r'Nb header lines : (\d+)\s*$',
                                         next(mpt_file))
             nb_headers = int(nb_headers_match.group(1))
             if nb_headers < 3:
@@ -152,7 +150,7 @@ class MPTFile():
         # Determine start of data
         with io.open(filename, encoding=self.encoding) as dataFile:
             # The second line states how long the header is
-            header_match = re.match("Nb header lines : (\d+)",
+            header_match = re.match(r"Nb header lines : (\d+)",
                                     dataFile.readlines()[1])
             headerLength = int(header_match.groups()[0]) - 1
         # Skip all the initial metadata
@@ -168,8 +166,62 @@ class MPTFile():
         return df
     
     def active_mass(self):
-        """Read the mpt file and extract the sample mass"""
+        """Read the mpt file and extract the sample mass."""
         return self.metadata.get('mass', None)
+    
+    def currents(self):
+        """Read the mpt file and extract the charge/discharge current.
+        
+        Returns
+        -------
+        charge_current : 
+          The current used for charging, or None if not available
+          (eg. CV experiemnt)
+        discharge_current :
+          The current used for discharging, or None if not available
+          (eg. CV experiemnt)
+        
+        """
+        print(self.metadata)
+        current_regexp = re.compile(r'^Is\s+[0-9.]+\s+([-0-9.]+)\s+([-0-9.]+)')
+        unit_regexp = re.compile(
+            r'^unit Is\s+[kmuµ]?A\s+([kmuµ]?A)\s+([kmuµ]?A)'
+        )
+        data_found = False
+        with io.open(self.filename, encoding='latin-1') as f:
+            for line in f:
+                # Check if this line has either the currents or the units
+                current_match = current_regexp.match(line)
+                unit_match = unit_regexp.match(line)
+                if current_match:
+                    charge_num, discharge_num = current_match.groups()
+                    charge_num = float(charge_num)
+                    discharge_num = float(discharge_num)
+                if unit_match:
+                    charge_unit, discharge_unit = unit_match.groups()
+                    data_found = True
+                    break
+        if data_found:
+            # Get the sympy units objects
+            charge_unit = getattr(electrochem_units, charge_unit.replace("µ", 'u'))
+            discharge_unit = getattr(electrochem_units, discharge_unit.replace("µ", 'u'))
+            charge_current = charge_unit * charge_num
+            discharge_current = discharge_unit * discharge_num
+            return charge_current, discharge_current
+        else:
+            # Current data could not be extracted from file
+            msg = "Could not read currents from file {filename}."
+            msg = msg.format(filename=self.filename)
+            raise exceptions_.ReadCurrentError(msg)
+    
+    def start_time(self):
+        """Return the start time of the experiment.
+        
+        Is returned as a timezone-unaware datetime object.
+        
+        """
+        start_time = self.metadata.get('start_time', None)
+        return start_time
 
 
 VMPmodule_hdr = np.dtype([('shortname', 'S10'),

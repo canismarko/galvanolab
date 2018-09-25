@@ -25,7 +25,6 @@ import logging
 from time import time
 
 import numpy as np
-from sympy.physics import units
 import pytz
 
 from . import exceptions_
@@ -55,7 +54,7 @@ class GalvanostatRun(Experiment):
         Return the charge capacity of the given cycle (default last).
         """
         return self.cycles[cycle_idx].charge_capacity()
-
+    
     def plot_cycles(self, xcolumn='capacity', ycolumn='Ewe/V',
                     ax=None, *args, **kwargs):
         return super().plot_cycles(xcolumn=xcolumn, ycolumn=ycolumn,
@@ -138,7 +137,7 @@ class GalvanostatRun(Experiment):
         if ax is None:
             ax = new_axes()
         # Convert to standard units
-        capacities = (capacities / electrochem_units.mAh * electrochem_units.gram)
+        capacities = (capacities / electrochem_units.capacity)
         capacities = capacities.astype(float)
         ax.plot(cycle_numbers,
                 capacities,

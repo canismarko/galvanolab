@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 import os
 from time import time
+import math
 import re
 import io
 
@@ -30,6 +31,15 @@ from . import exceptions_
 from . import electrochem_units
 from .cycle import Cycle
 from .plots import new_axes
+
+
+def requires_dataframe(func):
+    """Decorator to make sure the dataframe is loaded before running."""
+    def run_with_dataframe(self, *args, **kwargs):
+        if self._df is None:
+            self._load_data()
+        return func(self, *args, **kwargs)
+    return run_with_dataframe
 
 
 def axis_label(key):
@@ -48,16 +58,22 @@ class Experiment():
     
     """
     cycles = []
+    _df = None
     
-    def __init__(self, filename, mass=None):
+    def __init__(self, filename, mass=None, nmax:int=1000):
         """Parameters
         ----------
         filename : str
           Filename for the .mpt file with exported data.
         mass : optional
-          Mass of active material used. If ``None`` (default), and
+          Mass of active material used. If ``None`` (default), an
           attempt will be made to read the mass from the file. This
-          should be wrapped in a unit using the ``units`` library.
+          should be wrapped in a unit using the ``pint`` library.
+        nmax : optional
+          A cap on how many data points will be included in the
+          dataframe. Experiments can get out of hand, so if working
+          with the data is too slow, set this parameter to a smaller
+          value.
         
         """
         self.filename = filename
@@ -72,49 +88,92 @@ class Experiment():
         else:
             msg = "Unrecognized format {}".format(ext)
             raise exceptions_.FileFormatError(msg)
-        # self.load_csv(filename)
-        run = FileReader(filename)
-        self._df = run.dataframe
-        logstart = time()
-        log.debug(time() - logstart)
-        self.cycles = []
-        # Get theoretical capacity from eclab file
-        self.theoretical_capacity = self.capacity_from_file()
-        log.debug(time() - logstart)
-        log.debug("Found theoretical capacity {}".format(self.theoretical_capacity))
-        # Get currents from eclab file
-        try:
-            currents = self.currents_from_file()
-            self.charge_current, self.discharge_current = currents
-        except exceptions_.ReadCurrentError:
-            pass
-        log.debug(time() - logstart)
-        # Calculate capacity from charge and mass
-        if mass:
-            # User provided the mass
-            self.mass = mass
-        else:
+        self.datafile = FileReader(filename)
+        self._mass = mass
+        self.nmax = nmax
+    
+    @property
+    @requires_dataframe
+    def data(self):
+        """Retrieve the data as pandas dataframe."""
+        return self._df
+
+    @property
+    def mass(self):
+        """Retrieve the characteristic active material mass."""
+        if self._mass is None:
             # Get mass from eclab file
-            self.mass = run.active_mass()
-            if self.mass is not None:
-                self.mass = self.mass.to(electrochem_units.mass)
-        log.debug("First one {}".format(time() - logstart))
+            mass = self.datafile.active_mass()
+            if mass is not None:
+                mass = mass.to(electrochem_units.mass)
+        else:
+            # User provided the mass
+            mass = self._mass
+        return mass
+    
+    def _load_data(self):
+        """Read data from disk and save it for later use."""
+        logstart = time()
+        # Get the raw data from disk
+        df = self.datafile.dataframe
+        # Check if there are too many values and reduce if necessary
+        if self.nmax is not None and len(df) > self.nmax:
+            step = math.ceil(len(df) / self.nmax)
+            self._df = df.iloc[::step].copy()
+        else:
+            # Save full dataframe
+            self._df = df
+        del df
+        # Calculate capacity from charge and mass
         delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
-        log.debug("Next one: {}".format(time() - logstart))
-        idx = 1646
         if self.mass is not None:
             self._df.loc[:, 'capacity'] = delta_Q / self.mass
         else:
             self._df.loc[:, 'capacity'] = delta_Q
-        # Process other metadata
-        self.start_time = run.metadata.get('start_time', None)
-        # Split the data into cycles, except the initial resting phase
-        cycles = list(self._df.groupby('cycle number'))
+        log.info("Loaded %d datapoints from %s in %f seconds.",
+                 len(self._df), self.filename, time() - logstart)
+    
+    @property
+    def charge_current(self):
+        # Get currents from eclab file
+        try:
+            currents = self.datafile.currents()
+            charge_current, discharge_current = currents
+        except exceptions_.ReadCurrentError:
+            charge_current = None
+        return charge_current
+    
+    @property
+    def discharge_current(self):
+        # Get currents from eclab file
+        try:
+            currents = self.datafile.currents()
+            charge_current, discharge_current = currents
+        except exceptions_.ReadCurrentError:
+            discharge_current = None
+        return discharge_current
+    
+    @property
+    def theoretical_capacity(self):
+        """Return the calculate capacity for this experiment."""
+        theoretical_capacity = self.capacity_from_file()
+        return theoretical_capacity
+
+    @property
+    def start_time(self):
+        return self.datafile.start_time()
+    
+    @property
+    @requires_dataframe
+    def cycles(self):
+        """Return a list of ``Cycle`` objects for the run."""
+        cycles_df = list(self._df.groupby('cycle number'))
+        cycles = []
         # Create Cycle objects for each cycle
-        for cycle in cycles:
+        for cycle in cycles_df:
             new_cycle = Cycle(cycle[0], cycle[1])
-            self.cycles.append(new_cycle)
-        log.debug(time() - logstart)
+            cycles.append(new_cycle)
+        return cycles
     
     def capacity_from_file(self):
         """Read the mpt file and extract the theoretical capacity."""
@@ -131,39 +190,6 @@ class Experiment():
                     capacity = cap_unit * float(cap_num)
                     break
         return capacity
-    
-    def currents_from_file(self):
-        """Read the mpt file and extract the theoretical capacity."""
-        current_regexp = re.compile('^Is\s+[0-9.]+\s+([-0-9.]+)\s+([-0-9.]+)')
-        unit_regexp = re.compile(
-            '^unit Is\s+[kmuµ]?A\s+([kmuµ]?A)\s+([kmuµ]?A)'
-        )
-        data_found = False
-        with io.open(self.filename, encoding='latin-1') as f:
-            for line in f:
-                # Check if this line has either the currents or the units
-                current_match = current_regexp.match(line)
-                unit_match = unit_regexp.match(line)
-                if current_match:
-                    charge_num, discharge_num = current_match.groups()
-                    charge_num = float(charge_num)
-                    discharge_num = float(discharge_num)
-                if unit_match:
-                    charge_unit, discharge_unit = unit_match.groups()
-                    data_found = True
-                    break
-        if data_found:
-            # Get the sympy units objects
-            charge_unit = getattr(electrochem_units, charge_unit.replace("µ", 'u'))
-            discharge_unit = getattr(electrochem_units, discharge_unit.replace("µ", 'u'))
-            charge_current = charge_unit * charge_num
-            discharge_current = discharge_unit * discharge_num
-            return charge_current, discharge_current
-        else:
-            # Current data could not be extracted from file
-            msg = "Could not read currents from file {filename}."
-            msg = msg.format(filename=self.filename)
-            raise exceptions_.ReadCurrentError(msg)
     
     def closest_datum(self, value, label: str):
         """Retrieve the datapoint that is closest to a given data-point.
@@ -184,7 +210,7 @@ class Experiment():
           requested.
         
         """
-        df = self._df
+        df = self.data
         distance = (df[label] - value).abs()
         idx = df.iloc[distance.argsort()].first_valid_index()
         datum = df.loc[idx]
