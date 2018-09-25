@@ -111,62 +111,77 @@ class GalvanostatRun(Experiment):
         return self.plot_capacities(*args, **kwargs)
     
     def plot_capacities(self, ax=None, ax2=None,
-                        direction="discharge", plot_efficiences=True):
+                        direction: str="both", plot_efficiences: bool=True,
+                        legend_loc='best'):
         """Plot capacity of each cycle versus cycle number.
         
         Arguments
         ---------
-        - ax : Matplotlib axes for plotting capacities.
-        - ax2 : Matplotlib axes for plotting coulombic efficiences
-        - direction : whether to plot "charge" capcity or "discharge"
-          capacity.
-        - plot_efficiences : Whether to plot the coulombic efficiency
-          as well
+        ax : optional
+          Matplotlib axes for plotting capacities.
+        ax2 : optional
+          Matplotlib axes for plotting coulombic efficiences
+        direction : optional
+          whether to plot "charge" capcity, "discharge" capacity, or
+          "both" (default).
+        plot_efficiences : optional
+          Whether to plot the coulombic efficiency as well
+        legend_loc : optional
+          Position specifier for matplotlib legend used in the axes.
         """
         # Calculate relevant plotting values
         discharge = self.discharge_capacities()
         charge = self.charge_capacities()
-        if direction == "discharge":
-            capacities = discharge
-        elif direction == "charge":
-            capacities = charge
-        else:
-            raise ValueError("direction '{}' not recognized.")
+        if direction not in ('charge', 'discharge', 'both'):
+            raise ValueError("direction '{}' not recognized.".format(direction))
         cycle_numbers = [c.number for c in self.cycles]
-        # Plot cycle capacities
+        # Set up plotting environment
         if ax is None:
             ax = new_axes()
+        lines = []
         # Convert to standard units
-        capacities = (capacities / electrochem_units.capacity)
-        capacities = capacities.astype(float)
-        ax.plot(cycle_numbers,
-                capacities,
-                marker='o',
-                linestyle='--',
-                label="%s capacity" % direction)
+        discharge = (discharge / electrochem_units.capacity).astype(float)
+        charge = (charge / electrochem_units.capacity).astype(float)
+        # Plot charge and discharge capacities
+        if direction in ("charge", "both"):
+            ln = ax.plot(cycle_numbers, charge, marker='o',
+                         linestyle='--', color="C1", label="Charge")
+            lines.extend(ln)
+        if direction in ("discharge", "both"):
+            ln = ax.plot(cycle_numbers, discharge, marker='x',
+                    linestyle='--', color="C1", label="Discharge")
+            lines.extend(ln)
+        # Plot coulombic efficiencies, if asked for
         if plot_efficiences:
             efficiencies = discharge / charge * 100
             if ax2 is None:
                 ax2 = ax.twinx()
-            ax2.plot(cycle_numbers,
-                     efficiencies,
-                     marker='^',
-                     linestyle='--',
-                     color='C2',
-                     label="Coulombic efficiency")
+            ln = ax2.plot(cycle_numbers, efficiencies, marker='^',
+                          linestyle='--', color='C2',
+                          label="Coul. eff.")
             ax2.set_ylim(0, 105)
-            ax2.legend(loc='lower right')
+            ax2.legend().remove()
             ax2.set_ylabel('Coulombic efficiency (%)')
             ax2.spines['right'].set_visible(True)
+            lines.extend(ln)
         # Format axes
         if max(cycle_numbers) < 20:
             # Only show all of the ticks if there are less than 20
             ax.set_xticks(cycle_numbers)
         ax.set_xlim(0, 1 + max(cycle_numbers))
-        ax.set_ylim(0, 1.1 * max(capacities))
+        ax.set_ylim(0, 1.1 * max((max(charge), max(discharge))))
         ax.set_xlabel('Cycle')
-        ax.set_ylabel('%s capacity $/mAhg^{-1}$' % direction)
-        ax.legend(loc='lower left')
+        ax.set_ylabel('Capacity $/mAhg^{-1}$')
+        # Color code the axes for different plotting types
+        if plot_efficiences:
+            ax2.spines['left'].set_color('C1')
+            ax.tick_params(axis='y', colors="C1")
+            ax.yaxis.label.set_color('C1')
+            ax2.spines['right'].set_color('C2')
+            ax2.tick_params(axis='y', colors="C2")
+            ax2.yaxis.label.set_color('C2')
+        # Put all the legends on one axis
+        ax.legend(lines, (ln.get_label() for ln in lines), loc=legend_loc)
         return ax, ax2
     
     def plot_differential_capacity(self, ax=None, ax2=None, cycle=None):
@@ -190,7 +205,7 @@ class GalvanostatRun(Experiment):
                              ax=ax2,
                              linestyle='-.')
         # Annotate plot
-        ax.set_xlabel('Capacity $/mAh\ g^{-1}$')
-        ax2.set_xlabel('Capacity differential $/mAh\ g^{-1}V^{-1}$')
-        ax.set_ylabel('Cathode potential vs $ Li/Li^+$')
+        ax.set_xlabel(r'Capacity $/mAh\ g^{-1}$')
+        ax2.set_xlabel(r'Capacity differential $/mAh\ g^{-1}V^{-1}$')
+        ax.set_ylabel(r'Cathode potential vs $ Li/Li^+$')
         return ax, ax2
