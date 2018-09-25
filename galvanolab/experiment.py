@@ -60,10 +60,10 @@ class Experiment():
     cycles = []
     _df = None
     
-    def __init__(self, filename, mass=None, nmax:int=1000):
+    def __init__(self, filename: str, mass=None, nmax: int=5000):
         """Parameters
         ----------
-        filename : str
+        filename :
           Filename for the .mpt file with exported data.
         mass : optional
           Mass of active material used. If ``None`` (default), an

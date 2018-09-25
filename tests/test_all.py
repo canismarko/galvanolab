@@ -88,7 +88,8 @@ class ElectrodeTest(TestCase):
 
 class CycleTest(TestCase):
     def setUp(self):
-        self.run = GalvanostatRun(mptfile, mass=0.022563)
+        self.run = GalvanostatRun(mptfile, mass=0.022563 * electrochem_units.ureg.gram,
+                                  nmax=None)
         self.cycle = self.run.cycles[0]
     
     def test_discharge_capacity(self):
@@ -154,7 +155,7 @@ class GalvanostatRunTest(TestCase):
         )
     
     def test_capacity_from_time(self):
-        run = GalvanostatRun(mptfile)
+        run = GalvanostatRun(mptfile, nmax=None)
         datum = run.closest_datum(value=77067, label="time/s")
         DQ = 1.9789170300907912 * ureg.milliampere * ureg.hour # Read from file
         mass = 0.02253 * ureg.gram

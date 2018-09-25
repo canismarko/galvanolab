@@ -39,8 +39,8 @@ class Cycle():
     def discharge_capacity(self):
         """Calculate the difference between charged and discharged state"""
         max_capacity = np.max(self.df['capacity'])
-        min_idx = self.df['capacity'].last_valid_index()
-        min_capacity = self.df['capacity'][min_idx]
+        discharge_df = self.df[self.df['<I>/mA'] < 0]
+        min_capacity = np.min(discharge_df['capacity'])
         return max_capacity - min_capacity
 
     def plot_cycle(self, xcolumn, ycolumn, ax, label=None, marker='None', linestyle='-', *args, **kwargs):
