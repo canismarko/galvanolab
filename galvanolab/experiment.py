@@ -130,6 +130,8 @@ class Experiment():
             self._df.loc[:, 'capacity'] = delta_Q / self.mass
         else:
             self._df.loc[:, 'capacity'] = delta_Q
+        # Add time in hours as a column
+        self._df.loc[:, 'time/h'] = self._df['time/s'] / 3600.
         log.info("Loaded %d datapoints from %s in %f seconds.",
                  len(self._df), self.filename, time() - logstart)
     
