@@ -55,7 +55,7 @@ class GalvanostatRun(Experiment):
         """
         return self.cycles[cycle_idx].charge_capacity()
     
-    def plot_cycles(self, xcolumn='capacity', ycolumn='Ewe/V',
+    def plot_cycles(self, xcolumn='capacity', ycolumn='potential',
                     ax=None, *args, **kwargs):
         return super().plot_cycles(xcolumn=xcolumn, ycolumn=ycolumn,
                                    ax=ax, *args, **kwargs)

@@ -33,3 +33,4 @@ mg = ureg.milligram
 electrode_loading = mg / ureg.centimeter**2
 mass = ureg.gram
 capacity = mAh / ureg.gram
+coulomb = ureg.coulomb

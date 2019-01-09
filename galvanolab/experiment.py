@@ -125,11 +125,34 @@ class Experiment():
             self._df = df
         del df
         # Calculate capacity from charge and mass
-        delta_Q = self._df.loc[:, '(Q-Qo)/mA.h'] * electrochem_units.mAh
-        if self.mass is not None:
-            self._df.loc[:, 'capacity'] = delta_Q / self.mass
+        if '(Q-Qo)/mA.h' in self._df.columns:
+            charge_column = '(Q-Qo)/mA.h'
+            unit = electrochem_units.mAh
+        elif '(Q-Qo)/C' in self._df.columns:
+            charge_column = '(Q-Qo)/C'
+            unit = electrochem_units.coulomb
         else:
-            self._df.loc[:, 'capacity'] = delta_Q
+            warnings.warn("Could not find capacity data in file {}"
+                          "".format(self.filename))
+            charge_column = None
+        if charge_column is not None:
+            delta_Q = self._df.loc[:, charge_column] * unit
+            if self.mass is not None:
+                self._df.loc[:, 'capacity'] = delta_Q / self.mass
+            else:
+                self._df.loc[:, 'capacity'] = delta_Q
+        # Check for the most likely column with potential data
+        possible_cols = ('Ecell/V', 'Ewe/V')
+        col = None
+        for col in possible_cols: 
+            if col in self._df.columns:
+                potential_col = col
+                break
+        if col is not None:
+            self._df.loc[:, 'potential'] = self._df.loc[:, potential_col]
+        else:
+            warnings.warn("Could not find potential data in file {}"
+                          "".format(self.filename))
         # Add time in hours as a column
         self._df.loc[:, 'time/h'] = self._df['time/s'] / 3600.
         log.info("Loaded %d datapoints from %s in %f seconds.",
