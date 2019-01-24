@@ -183,7 +183,7 @@ class Experiment():
         """Return the calculate capacity for this experiment."""
         theoretical_capacity = self.capacity_from_file()
         return theoretical_capacity
-
+    
     @property
     def start_time(self):
         return self.datafile.start_time()
@@ -252,8 +252,9 @@ class Experiment():
         ax.set_xlabel(axis_label(xcolumn))
         ax.set_ylabel(axis_label(ycolumn))
         legend = []
+        artists = []
         for cycle in self.cycles:
-            ax = cycle.plot_cycle(xcolumn, ycolumn, ax, *args, **kwargs)
-            legend.append(cycle.number)
-        ax.legend(legend)
-        return ax
+            label = "Cycle {}".format(cycle.number)
+            artists.extend(
+                cycle.plot_cycle(xcolumn, ycolumn, ax, label=label, *args, **kwargs))
+        return artists

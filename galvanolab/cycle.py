@@ -24,25 +24,25 @@ from . import electrochem_units
 
 class Cycle():
     """Data from one charge-discharge cycle."""
-
+    
     def __init__(self, number, df):
         self.number = int(number)
         self.df = df
-
+    
     def charge_capacity(self):
         """Calculate difference between discharged and charged state"""
         max_capacity = np.max(self.df['capacity'])
         min_idx = self.df['capacity'].first_valid_index()
         min_capacity = self.df['capacity'][min_idx]
         return max_capacity - min_capacity
-
+    
     def discharge_capacity(self):
         """Calculate the difference between charged and discharged state"""
         max_capacity = np.max(self.df['capacity'])
         discharge_df = self.df[self.df['<I>/mA'] < 0]
         min_capacity = np.min(discharge_df['capacity'])
         return max_capacity - min_capacity
-
+    
     def plot_cycle(self, xcolumn, ycolumn, ax, label=None, marker='None', linestyle='-', *args, **kwargs):
         # Default label for plot
         if label is None:
@@ -65,5 +65,5 @@ class Cycle():
         ydata = df[ycolumn] / units_.get(ycolumn, 1)
         xdata = xdata.astype(float)
         ydata = ydata.astype(float)
-        ax.plot(xdata, ydata, label=label, marker=marker, linestyle=linestyle, *args, **kwargs)
-        return ax
+        artist = ax.plot(xdata, ydata, label=label, marker=marker, linestyle=linestyle, *args, **kwargs)
+        return artist
