@@ -29,6 +29,7 @@ import pandas as pd
 import numpy as np
 
 from . import electrochem_units
+from galvanolab.basefile import BaseFile
 
 """Code to read in data files from Bio-Logic instruments. Class for
 reading MPR files taken from
@@ -109,7 +110,7 @@ def process_mpt_headers(headers):
     return metadata
 
 
-class MPTFile():
+class MPTFile(BaseFile):
     """Simple function to open MPT files as csv.DictReader objects
     
     Checks for the correct headings, skips any comments and returns a
@@ -182,7 +183,6 @@ class MPTFile():
           (eg. CV experiemnt)
         
         """
-        print(self.metadata)
         current_regexp = re.compile(r'^Is\s+[0-9.]+\s+([-0-9.]+)\s+([-0-9.]+)')
         unit_regexp = re.compile(
             r'^unit Is\s+[kmuµ]?A\s+([kmuµ]?A)\s+([kmuµ]?A)'

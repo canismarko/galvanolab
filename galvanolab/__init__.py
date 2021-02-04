@@ -18,6 +18,7 @@
 # along with Galvanolab.  If not, see <http://www.gnu.org/licenses/>.
 
 from .galvanostatrun import GalvanostatRun
+from .chinstruments import CHFile
 from .cyclicvoltammogram import CyclicVoltammogram
 from .electrode import CathodeLaminate, CoinCellElectrode
 from .cycle import Cycle
