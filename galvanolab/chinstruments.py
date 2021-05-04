@@ -92,6 +92,11 @@ class CHFile(BaseFile):
                 dfs.append(new_df)
             df = pd.concat(dfs)
             df.set_index('timestamp', inplace=True)
+            # It seems that the timestamp at the top of the file is
+            # actually the end of the experiment, so we need to adjust
+            # all the timestamps
+            duration = df.index.max() - df.index.min()
+            df.set_index(df.index - duration, inplace=True)
             return df
     
     @staticmethod
