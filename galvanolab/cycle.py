@@ -28,6 +28,10 @@ class Cycle():
     def __init__(self, number, df):
         self.number = int(number)
         self.df = df
+
+    @property
+    def data(self):
+        return self.df
     
     def charge_capacity(self):
         """Calculate difference between discharged and charged state"""

@@ -14,7 +14,7 @@ Filepath = Union[str, Path]
 Filenames = Union[Filepath, Sequence[Filepath]]
 
 class CHFile(BaseFile):
-    def __init__(self, filename: Filenames) -> pd.DataFrame:
+    def __init__(self, filename: Filenames):
         """
         
         Parameters

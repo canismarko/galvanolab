@@ -10,5 +10,6 @@ setup(name="galvanolab",
       url="https://github.com/m3wolf/galvanolab",
       license="GPLv3.0",
       packages=['galvanolab',],
-      install_requires=('pint', 'numpy', 'pandas', 'pytz', 'scipy', 'matplotlib', 'python-dateutil'),
+      install_requires=('pint', 'numpy', 'pandas', 'pytz', 'scipy', 'matplotlib',
+                        'python-dateutil', 'pint-pandas'),
 )

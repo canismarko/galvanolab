@@ -18,9 +18,19 @@
 # along with Galvanolab.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from pint import UnitRegistry
+import logging
 
+from pint import UnitRegistry, set_application_registry
+import pint_pandas
+
+log = logging.getLogger(__name__)
+
+# Create a universal unit registry
 ureg = UnitRegistry()
+set_application_registry(ureg)
+pint_pandas.PintType.ureg = ureg
+
+log.debug("Instantiating registry: %s", repr(ureg))
 
 # Prepare some composite units specific to electrochemistry
 mAh = ureg.milliampere * ureg.hour

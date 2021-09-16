@@ -25,10 +25,9 @@ from time import time
 import math
 import re
 import io
+import warnings
 
-from . import biologic
-from . import exceptions_
-from . import electrochem_units
+from . import biologic, maccor, exceptions_, electrochem_units
 from .cycle import Cycle
 from .plots import new_axes
 
@@ -81,6 +80,7 @@ class Experiment():
         file_readers = {
             '.mpr': biologic.MPRFile,
             '.mpt': biologic.MPTFile,
+            '.txt': maccor.MaccorTextFile,
         }
         if ext in file_readers.keys():
             FileReader = file_readers[ext]
@@ -141,20 +141,7 @@ class Experiment():
                 self._df.loc[:, 'capacity'] = delta_Q / self.mass
             else:
                 self._df.loc[:, 'capacity'] = delta_Q
-        # Check for the most likely column with potential data
-        possible_cols = ('Ecell/V', 'Ewe/V')
-        col = None
-        for col in possible_cols: 
-            if col in self._df.columns:
-                potential_col = col
-                break
-        if col is not None:
-            self._df.loc[:, 'potential'] = self._df.loc[:, potential_col]
-        else:
-            warnings.warn("Could not find potential data in file {}"
-                          "".format(self.filename))
         # Add time in hours as a column
-        self._df.loc[:, 'time/h'] = self._df['time/s'] / 3600.
         log.info("Loaded %d datapoints from %s in %f seconds.",
                  len(self._df), self.filename, time() - logstart)
     
@@ -192,7 +179,7 @@ class Experiment():
     @requires_dataframe
     def cycles(self):
         """Return a list of ``Cycle`` objects for the run."""
-        cycles_df = list(self._df.groupby('cycle number'))
+        cycles_df = list(self._df.groupby('cycle'))
         cycles = []
         # Create Cycle objects for each cycle
         for cycle in cycles_df:

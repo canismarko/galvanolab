@@ -29,7 +29,7 @@ import pandas as pd
 import numpy as np
 
 from . import electrochem_units
-from galvanolab.basefile import BaseFile
+from galvanolab.basefile import BaseFile, fix_df_column
 
 """Code to read in data files from Bio-Logic instruments. Class for
 reading MPR files taken from
@@ -163,6 +163,15 @@ class MPTFile(BaseFile):
                          sep='\t',
                          error_bad_lines=False,
                          **kwargs)
+        # Rename columns to be consistent with other formats
+        # df.rename(columns={
+        #     "Ewe/V": "potential_V",
+        #     "<I>/mA": "current_mA",
+        # }, inplace=True)
+        fix_df_column(df, old="Ewe/V", new="potential", unit="V")
+        fix_df_column(df, old="Ecell/V", new="potential", unit="V")
+        fix_df_column(df, old="<I>/mA", new="current", unit="mA")
+        # Store and return
         self.dataframe = df
         return df
     

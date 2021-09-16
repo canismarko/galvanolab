@@ -4,4 +4,5 @@ python-dateutil
 pytz
 scipy
 pint
+pint-pandas
 matplotlib

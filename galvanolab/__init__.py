@@ -17,8 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with Galvanolab.  If not, see <http://www.gnu.org/licenses/>.
 
+from . import electrochem_units
+from .electrochem_units import ureg
+setup_matplotlib = ureg.setup_matplotlib
+
 from .galvanostatrun import GalvanostatRun
 from .chinstruments import CHFile
+from .maccor import MaccorTextFile
 from .cyclicvoltammogram import CyclicVoltammogram
 from .electrode import CathodeLaminate, CoinCellElectrode
 from .cycle import Cycle
